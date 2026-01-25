@@ -45,7 +45,7 @@ The result from the above command is automatically copied to your clipboard.
 
 - **`-n PROMPT SYSTEM_PROMPT`** - Optimized command to accept nyarchassistant JSON format prompt and system prompt.
  
-Use the following command in nyarchassistant (Settings -> LLM -> Custome Command -> Command to execute to get bot output):
+Use the following command in nyarchassistant (Settings -> LLM -> Custom Command -> Command to execute to get bot output):
 ```
 read -r -d '' RAW_PROMPT <<\EOF_PROMPT
 {0}
