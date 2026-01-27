@@ -203,36 +203,25 @@ async def main():
             logger.debug(f"orig_prompt_jsons: {str(orig_prompt_jsons)}")
             logger.debug(f"system_prompt: {system_prompt}")
 
-            list_to_send = []
-            path_list = []
+            searched_prompts_list = []
+            searched_path_list = []
             uuid_to_search = None
             uuid_to_update = None
             for idx, each_json in enumerate(orig_prompt_jsons):
                 if idx % 2 == 0:
-                    if len(orig_prompt_jsons) <= 3:
-                        list_to_send.append(each_json)
-                        pattern = (
-                            r"```(?:image|file)(?:\\n|\s)+([\s\S]*?)(?:\\n|\s)+```"
-                        )
-                        extracted_paths = re.findall(pattern, each_json["Message"])
-                        path_list += [path.strip() for path in extracted_paths]
-                    else:
-                        if idx == len(orig_prompt_jsons) - 1:
-                            prompt_to_send = each_json["Message"]
-                            pattern = (
-                                r"```(?:image|file)(?:\\n|\s)+([\s\S]*?)(?:\\n|\s)+```"
-                            )
-                            extracted_paths = re.findall(pattern, each_json["Message"])
-                            path_list += [path.strip() for path in extracted_paths]
+                    searched_prompts_list.append(each_json)
+                    pattern = r"```(?:image|file)(?:\\n|\s)+([\s\S]*?)(?:\\n|\s)+```"
+                    extracted_paths = re.findall(pattern, each_json["Message"])
+                    searched_path_list += [path.strip() for path in extracted_paths]
                 else:
-                    if len(orig_prompt_jsons) <= 3:
-                        tmp_dict = {
-                            "User": each_json["User"],
-                            "Message": each_json["Message"],
-                        }
-                        list_to_send.append(tmp_dict)
-                    uuid_to_search = str(uuid_to_update) if uuid_to_update else None
-                    uuid_to_update = str(each_json["UUID"])
+                    tmp_dict = {
+                        "User": each_json["User"],
+                        "Message": each_json["Message"],
+                    }
+                    searched_prompts_list.append(tmp_dict)
+                    if each_json.get("UUID"):
+                        uuid_to_search = str(uuid_to_update) if uuid_to_update else None
+                        uuid_to_update = str(each_json["UUID"])
 
             GEM_NAME = "gemini-webcli"
 
@@ -253,14 +242,26 @@ async def main():
                     prompt=system_prompt,
                 )
 
-            if len(path_list) == 0:
-                logger.debug("No files to send: Sending only prompt message...")
-                path_list = None
+            logger.debug(f"uuid_to_search: {uuid_to_search}")
+            if uuid_to_search:
+                prompts_to_send = str(
+                    searched_prompts_list[len(searched_prompts_list) - 1]["Message"]
+                )
+                if len(searched_path_list) > 0:
+                    path_to_send = searched_path_list[len(searched_path_list) - 1]
+                else:
+                    path_to_send = None
             else:
-                logger.debug(f"path_list: {str(path_list)}")
-            if len(orig_prompt_jsons) <= 3:
-                prompt_to_send = str(list_to_send)
-            logger.debug(f"prompt_to_send: {prompt_to_send}")
+                prompts_to_send = str(searched_prompts_list)
+                if len(searched_path_list) > 0:
+                    path_to_send = searched_path_list
+                else:
+                    path_to_send = None
+            logger.debug(f"prompts_to_send: {prompts_to_send}")
+            if path_to_send:
+                logger.debug(f"path_to_send: {str(path_to_send)}")
+            else:
+                logger.debug("No files to send: Sending only prompt message...")
 
             # Add prefix of the directory path of `gemini-webcli`
             CACHE_FILEPATH = os.path.join(
@@ -268,7 +269,6 @@ async def main():
             )
 
             previous_session = None
-            logger.debug(f"uuid_to_search: {uuid_to_search}")
             # if cache file does not exist, create an empty one
             if not os.path.exists(CACHE_FILEPATH):
                 with open(CACHE_FILEPATH, "w+") as cache_file:
@@ -290,7 +290,7 @@ async def main():
             )
 
             logger.info(f"Sending request with {GEM_NAME} gem...")
-            resp = await chat.send_message(prompt_to_send, files=path_list)
+            resp = await chat.send_message(prompts_to_send, files=path_to_send)
 
             logger.info("Response received: " + str(resp))
             print(resp.text)
