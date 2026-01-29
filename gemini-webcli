@@ -214,10 +214,14 @@ async def main():
                     extracted_paths = re.findall(pattern, each_json["Message"])
                     searched_path_list += [path.strip() for path in extracted_paths]
                 else:
-                    tmp_dict = {
-                        "User": each_json["User"],
-                        "Message": each_json["Message"],
-                    }
+                    tmp_dict = (
+                        {
+                            "User": each_json["User"],
+                            "Message": each_json["Message"],
+                        }
+                        if len(orig_prompt_jsons) != 2
+                        else each_json
+                    )
                     searched_prompts_list.append(tmp_dict)
                     if each_json.get("UUID"):
                         uuid_to_search = str(uuid_to_update) if uuid_to_update else None
@@ -244,15 +248,22 @@ async def main():
 
             logger.debug(f"uuid_to_search: {uuid_to_search}")
             if uuid_to_search:
-                prompts_to_send = str(
-                    searched_prompts_list[len(searched_prompts_list) - 1]["Message"]
-                )
+                prompts_to_send = searched_prompts_list[len(searched_prompts_list) - 1][
+                    "Message"
+                ]
                 if len(searched_path_list) > 0:
                     path_to_send = searched_path_list[len(searched_path_list) - 1]
                 else:
                     path_to_send = None
             else:
-                prompts_to_send = str(searched_prompts_list)
+                if len(searched_prompts_list) == 1:
+                    prompts_to_send = searched_prompts_list[0]["Message"]
+                else:
+                    assert (
+                        len(searched_prompts_list) == 2
+                        or len(searched_prompts_list) == 3
+                    )
+                    prompts_to_send = str(searched_prompts_list)
                 if len(searched_path_list) > 0:
                     path_to_send = searched_path_list
                 else:
