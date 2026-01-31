@@ -53,7 +53,7 @@ EOF_PROMPT
 read -r -d '' RAW_SYSTEM <<\EOF_SYSTEM
 {1}
 EOF_SYSTEM
-__VENV_PATH__/python __VENV_PATH__/gemini-webcli -n "$RAW_PROMPT" "$RAW_SYSTEM"
+__VENV_PATH__/bin/python __VENV_PATH__/gemini-webcli -n "$RAW_PROMPT" "$RAW_SYSTEM"
 ```
 
 (replace `__VENV_PATH__` with your actual path)
